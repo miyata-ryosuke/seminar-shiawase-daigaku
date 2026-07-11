@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>無理なく自然に拡大する源（ソース）の秘密 — しあわせだいがく</title>
+<style>
+  :root{
+    --mizu:#ACD5DA;        /* 水縹色 */
+    --mizu-soft:#D7EBEE;   /* 淡い水縹 */
+    --cream:#EFEAD9;       /* 生成り */
+    --cream-bg:#F7F4EC;    /* 背景の生成り */
+    --deep:#324B52;        /* 深い藍緑 */
+    --ink:#211815;         /* 見出し */
+    --body:#52493F;        /* 本文 */
+    --brown:#5E4B3A;       /* 矢印・線 */
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
+    background:#2c2c2b; color:var(--body);
+    display:flex; align-items:center; justify-content:center;
+    height:100vh; overflow:hidden; letter-spacing:.04em;
+  }
+  /* 16:9 ステージ */
+  #stage{
+    position:relative; width:100vw; height:56.25vw; max-height:100vh; max-width:177.78vh;
+    background:var(--cream-bg); overflow:hidden; box-shadow:0 0 60px rgba(0,0,0,.4);
+  }
+  .slide{
+    position:absolute; inset:0; opacity:0; visibility:hidden;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:8% 9%; transition:opacity .45s ease;
+  }
+  .slide.active{ opacity:1; visibility:visible; }
+  /* 上部の細い水縹帯 */
+  .slide::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:1.1%;
+    background:linear-gradient(90deg,var(--mizu),var(--mizu-soft));
+  }
+  /* 共通パーツ */
+  .kicker{ color:var(--mizu); font-size:1.15vw; letter-spacing:.25em; font-weight:700; margin-bottom:2.2vh; text-transform:uppercase; }
+  .kicker.dark{ color:var(--deep); }
+  h1{ color:var(--ink); font-weight:700; line-height:1.4; }
+  .big{ font-size:4.6vw; letter-spacing:.02em; }
+  .mid{ font-size:3.2vw; line-height:1.5; }
+  .lead{ font-size:2.2vw; color:var(--ink); font-weight:700; line-height:1.6; }
+  p.sub{ font-size:1.5vw; color:var(--body); line-height:1.9; margin-top:2.5vh; font-weight:500; }
+  p.story{ font-size:2vw; color:var(--ink); line-height:2; max-width:84%; font-weight:500; }
+  ul{ list-style:none; margin-top:1vh; }
+  ul li{ font-size:1.9vw; color:var(--ink); line-height:1.8; padding:1.1vh 0 1.1vh 3.2vw; position:relative; font-weight:500; }
+  ul li::before{ content:""; position:absolute; left:0; top:2.5vh; width:1.4vw; height:1.4vw; border-radius:50%; background:var(--mizu); }
+  ul li .arrow{ display:inline-block; color:var(--deep); font-weight:700; }
+  .note{ color:var(--body); font-size:1.4vw; margin-top:3vh; line-height:1.8; }
+  .center{ align-items:center; text-align:center; }
+  .center h1{ max-width:80%; }
+  .em{ color:var(--deep); font-weight:700; }
+  .card{ background:#fff; border:1px solid #e7e0cf; border-radius:1.4vw; padding:3vh 3vw; }
+  .fill{ color:var(--mizu); font-weight:700; }
+  .tag-karari{ display:inline-block; background:var(--mizu-soft); color:var(--deep); font-size:1.05vw; font-weight:700; padding:.7vh 1.4vw; border-radius:2vw; letter-spacing:.15em; }
+
+  /* 問いスライド */
+  .ask{ background:linear-gradient(160deg,#fff, #eef6f7); }
+  .ask h1{ color:var(--deep); }
+  .ask .q-mark{ font-size:6vw; color:var(--mizu); line-height:1; margin-bottom:2vh; }
+
+  /* 仮スライド（後半） */
+  .draft{ background:repeating-linear-gradient(45deg,#f7f4ec,#f7f4ec 22px,#f3efe2 22px,#f3efe2 44px); }
+  .draft-badge{ position:absolute; top:5%; right:6%; background:var(--brown); color:#fff; font-size:1vw; padding:.7vh 1.4vw; border-radius:.6vw; letter-spacing:.1em; }
+
+  /* 進行ガイド（話者用の問い）*/
+  .speak{ position:absolute; left:9%; bottom:6.5%; font-size:1.05vw; color:var(--brown); font-weight:700; }
+  .speak span{ color:var(--mizu); }
+
+  /* フッター */
+  .foot{ position:absolute; bottom:3.5%; right:6%; font-size:.95vw; color:#9a9284; letter-spacing:.12em; }
+  .foot-l{ position:absolute; bottom:3.5%; left:9%; font-size:.95vw; color:#b6ac9a; letter-spacing:.1em; }
+
+  /* ナビ */
+  #counter{ position:fixed; bottom:14px; right:20px; color:#cdc7ba; font-size:13px; letter-spacing:.1em; z-index:10; }
+  .nav{ position:fixed; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:10; }
+  .nav button{ background:rgba(255,255,255,.12); color:#eee; border:1px solid rgba(255,255,255,.25); border-radius:20px; padding:6px 16px; font-size:13px; cursor:pointer; }
+  .nav button:hover{ background:rgba(255,255,255,.25); }
+  .hint{ position:fixed; top:12px; left:50%; transform:translateX(-50%); color:#8f8a80; font-size:12px; z-index:10; }
+
+  svg{ display:block; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- S01 | 表紙 -->
+  <section class="slide active center">
+    <div class="kicker" style="font-size:2.4vw; letter-spacing:.32em; margin-bottom:3.2vh;">しあわせだいがく</div>
+    <h1 class="big">無理なく自然に拡大する<br><span class="em">源（ソース）</span>の秘密</h1>
+    <p class="sub">〜 グランドマネジメントという世界観 〜</p>
+    <div class="foot-l">しあわせだいがく</div>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S02 | 問い -->
+  <section class="slide center ask">
+    <div class="q-mark">？</div>
+    <h1 class="mid">そもそも、しあわせが<br><span class="em">「無理なく自然に広がる」</span>って<br>どういうこと？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S03 | こんなこと、ありませんか -->
+  <section class="slide">
+    <h1 class="lead">こんなこと、ありませんか？</h1>
+    <ul>
+      <li>自分がやりたいと思っても、<span class="em">家族が賛同してくれない</span></li>
+      <li>社長がこうしたいと思っても、<span class="em">社員はそう思わない</span></li>
+      <li>家族・社員・お客様の幸せを考えるうち、<span class="em">自分がしんどくなる</span></li>
+      <li>人生をもっと良くしようとして、<span class="em">疲弊してしまう</span></li>
+      <li>がんばっているけど、<span class="em">終わりが見えない</span></li>
+    </ul>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S04 | ゼロサムじゃないはず -->
+  <section class="slide center">
+    <h1 class="mid">しあわせは<span class="em">ゼロサムじゃない</span>はずなのに——<br>「こっちを立てれば、あっちが立たない」</h1>
+    <p class="sub">どこかで、折衷案や妥協案を探さざるを得なくなる。</p>
+    <svg viewBox="0 0 260 150" style="height:20vh; margin-top:3vh; align-self:center;">
+      <polygon points="130,150 108,150 130,98 152,150" fill="#5E4B3A"/>
+      <rect x="34" y="86" width="192" height="14" rx="7" fill="#ACD5DA" transform="rotate(-13 130 93)"/>
+      <circle cx="54" cy="60" r="19" fill="#324B52"/>
+      <circle cx="206" cy="116" r="19" fill="#EFEAD9" stroke="#c9bfa8" stroke-width="2"/>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S05 | なぜそうなる（問い・扉） -->
+  <section class="slide center ask">
+    <div class="q-mark">？</div>
+    <h1 class="mid">なぜ、そうなるんでしょうか？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S06 | 限られたリソースだから（諦めの声） -->
+  <section class="slide">
+    <ul>
+      <li>「限られたリソースしかないから仕方ない」</li>
+      <li>「何でもかんでも欲張っても意味がない」</li>
+      <li>「物事には優先順位がある」</li>
+    </ul>
+    <p class="sub" style="margin-top:3.5vh;">結局は——<span class="em">「今は仕方がない」</span></p>
+    <svg viewBox="0 0 200 172" style="height:22vh; margin-top:2.5vh; align-self:center;">
+      <rect x="55" y="16" width="90" height="10" rx="5" fill="#5E4B3A"/>
+      <rect x="55" y="146" width="90" height="10" rx="5" fill="#5E4B3A"/>
+      <path d="M66,26 L134,26 L100,86 L134,146 L66,146 L100,86 Z" fill="#EFEAD9" stroke="#5E4B3A" stroke-width="3"/>
+      <path d="M74,32 L126,32 L100,80 Z" fill="#ACD5DA"/>
+      <path d="M84,140 L116,140 L100,112 Z" fill="#ACD5DA"/>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S07 | 限られた3つのリソース -->
+  <section class="slide center">
+    <ul style="text-align:left;">
+      <li style="font-size:2.8vw;">時間</li>
+      <li style="font-size:2.8vw;">お金</li>
+      <li style="font-size:2.8vw;">労力</li>
+    </ul>
+    <svg viewBox="0 0 380 130" style="height:17vh; margin-top:2vh; align-self:center;">
+      <circle cx="60" cy="65" r="34" fill="none" stroke="#324B52" stroke-width="4"/>
+      <line x1="60" y1="65" x2="60" y2="42" stroke="#324B52" stroke-width="4" stroke-linecap="round"/>
+      <line x1="60" y1="65" x2="80" y2="72" stroke="#324B52" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="190" cy="65" r="34" fill="#ACD5DA"/>
+      <text x="190" y="78" text-anchor="middle" font-size="36" fill="#324B52" font-weight="700">¥</text>
+      <path d="M320,32 C344,58 340,86 320,98 C300,86 296,58 320,32 Z" fill="#EFEAD9" stroke="#5E4B3A" stroke-width="3"/>
+      <path d="M320,58 C332,72 330,86 320,92 C310,86 308,72 320,58 Z" fill="#ACD5DA"/>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S08 | そのアプローチでは広がらない（問い） -->
+  <section class="slide center ask">
+    <h1 class="mid">でも——そのアプローチで、<br>しあわせは<span class="em">自然に広がっていく</span>でしょうか？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S09 | つい How を考える -->
+  <section class="slide">
+    <div class="kicker dark">私たちがやりがちなこと</div>
+    <h1 class="lead">つい、「How（どうやって）」を考える。</h1>
+    <ul>
+      <li>もっと仕事を頑張って、収入を増やせばいい？</li>
+      <li>人を雇って、もっと仕組み化すればいい？</li>
+      <li>将来のために、なるべくたくさんのスキルを身につければいい？</li>
+    </ul>
+    <svg viewBox="0 0 200 180" style="height:19vh; margin-top:2vh; align-self:center;">
+      <g fill="#ACD5DA">
+        <rect x="66" y="56" width="68" height="68" rx="12"/>
+        <rect x="66" y="56" width="68" height="68" rx="12" transform="rotate(45 100 90)"/>
+        <circle cx="100" cy="90" r="42"/>
+      </g>
+      <circle cx="100" cy="90" r="18" fill="#F7F4EC"/>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S10 | Howの罠（扉） -->
+  <section class="slide center">
+    <h1 class="big"><span class="em">How の罠</span></h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S11 | Howの罠 -->
+  <section class="slide center">
+    <div class="tag-karari">Ho w の罠</div>
+    <h1 class="mid" style="margin-top:3vh;">今の力・今見えている範囲で「How」を考えると——</h1>
+    <p class="sub">みんな、すでに一生懸命。限界まで頑張っている。<br>その視点で解決しようとすると、<span class="em">「何かをやめて、代わりにこれをやる」取引（トレードオフ）</span>になる。<br>これでは、しあわせを無理なく広げるのは難しい。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S12 | では、どうすれば（問い直し） -->
+  <section class="slide center ask">
+    <div class="q-mark">？</div>
+    <h1 class="mid">では、どうすれば<br>いいのでしょうか？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S13 | 答えは順番を変えること -->
+  <section class="slide center">
+    <h1 class="mid">答えは、<span class="em">「順番を変える」</span>こと。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S14 | GMという世界観 -->
+  <section class="slide center">
+    <div class="kicker">その土台となる考え方</div>
+    <h1 class="big"><span class="em">Grand Management®</span></h1>
+    <p class="sub" style="font-size:2.4vw; color:var(--ink); font-weight:700; margin-top:1.6vh;">という世界観</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S15 | GM構造図（斜め登り） -->
+  <section class="slide">
+    <div class="kicker dark">GMの全体像</div>
+    <h1 class="lead" style="margin-bottom:2vh;">深さ・高さ・流れから、自然な戦略が生まれる</h1>
+    <svg viewBox="0 0 1000 420" width="100%" style="max-height:56vh; margin-top:1vh;">
+      <!-- 曲線矢印 -->
+      <path d="M250,320 C400,320 430,250 500,210 S650,120 760,110" fill="none" stroke="#5E4B3A" stroke-width="5"/>
+      <polygon points="760,110 740,100 748,122" fill="#5E4B3A" transform="rotate(-8 754,111)"/>
+      <!-- Source -->
+      <circle cx="200" cy="320" r="95" fill="#ACD5DA"/>
+      <text x="200" y="312" text-anchor="middle" fill="#324B52" font-size="34" font-weight="700">Source</text>
+      <text x="200" y="348" text-anchor="middle" fill="#3f6169" font-size="20">源・本質</text>
+      <!-- Structure -->
+      <rect x="410" y="150" width="200" height="110" rx="20" fill="#EFEAD9" stroke="#e0d8c4"/>
+      <text x="510" y="196" text-anchor="middle" fill="#211815" font-size="30" font-weight="700">Structure</text>
+      <text x="510" y="230" text-anchor="middle" fill="#52493F" font-size="19">構造・仕組み</text>
+      <!-- Sense -->
+      <circle cx="810" cy="110" r="95" fill="#ACD5DA"/>
+      <text x="810" y="102" text-anchor="middle" fill="#324B52" font-size="34" font-weight="700">Sense</text>
+      <text x="810" y="138" text-anchor="middle" fill="#3f6169" font-size="20">流れ・未来</text>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S16 | 深さ×高さ 菱形 -->
+  <section class="slide">
+    <div class="kicker dark">「自然な戦略」に必要な視点</div>
+    <svg viewBox="0 0 900 470" width="100%" style="max-height:60vh;">
+      <!-- 菱形 -->
+      <polygon points="450,60 760,235 450,410 140,235" fill="none" stroke="#ACD5DA" stroke-width="2"/>
+      <ellipse cx="450" cy="235" rx="300" ry="42" fill="#EFEAD9"/>
+      <line x1="140" y1="235" x2="760" y2="235" stroke="#b7ad9a" stroke-width="1.5" stroke-dasharray="4 8"/>
+      <!-- 上向き矢印（視座）-->
+      <line x1="450" y1="230" x2="450" y2="110" stroke="#ACD5DA" stroke-width="10"/>
+      <polygon points="450,86 434,116 466,116" fill="#ACD5DA"/>
+      <!-- 下向き矢印（源泉）-->
+      <line x1="450" y1="240" x2="450" y2="360" stroke="#5E4B3A" stroke-width="10"/>
+      <polygon points="450,384 434,354 466,354" fill="#5E4B3A"/>
+      <!-- ラベル -->
+      <rect x="378" y="20" width="144" height="52" rx="10" fill="#ECEAE4"/>
+      <text x="450" y="54" text-anchor="middle" fill="#211815" font-size="26" font-weight="700">「高さ」</text>
+      <text x="450" y="185" text-anchor="middle" fill="#52493F" font-size="21">視座（俯瞰・全体像）</text>
+      <text x="450" y="300" text-anchor="middle" fill="#52493F" font-size="21">源泉（本質・想い・エネルギー）</text>
+      <rect x="378" y="398" width="144" height="52" rx="10" fill="#ECEAE4"/>
+      <text x="450" y="432" text-anchor="middle" fill="#211815" font-size="26" font-weight="700">「深さ」</text>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S17 | Howは最後 -->
+  <section class="slide center">
+    <h1 class="mid">だから、<span class="em">「How」は一番最後でいい。</span></h1>
+    <p class="sub">深さと高さを広げたとき、<br>「今まで見えてなかったけど、こうすればよかった」に気づく。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S18 | 主役＝ソース（問い） -->
+  <section class="slide center ask">
+    <div class="kicker">今日の主役</div>
+    <h1 class="big"><span class="em">深さ ＝ 源 ＝ Source</span></h1>
+    <p class="sub">自分の中にある「力の源泉」</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S19 | パワーはどこから -->
+  <section class="slide center">
+    <h1 class="mid">例えば、関わった人<span class="em">100人</span>の幸せを考える。<br>例えば、<span class="em">100年先</span>の未来の幸せを生み出す。</h1>
+    <p class="sub">それには、相当な<span class="em">パワー</span>が必要です。<br>では、そのパワーは、どこから生まれるのでしょうか。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S20 | 内側から湧く -->
+  <section class="slide center">
+    <img src="logo-mark.png" alt="マルコンサルティングのロゴマーク（m＝泉）" style="height:26vh; margin-bottom:4vh;">
+    <h1 class="mid">それはソース、<span class="em">自分の内側</span>から<br>こんこんと湧き上がってきます。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S21 | ソースとは何か（問い） -->
+  <section class="slide center ask">
+    <div class="q-mark">？</div>
+    <h1 class="mid">では、<span class="em">ソース</span>とは<br>一体、何でしょうか？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S22 | ソースのイメージ（問い） -->
+  <section class="slide center ask">
+    <h1 class="mid"><span class="em">ソース</span>と聞いて、<br>どんなイメージがありますか？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S23 | ソースの例（経験・技術・価値観・歴史） -->
+  <section class="slide">
+    <ul>
+      <li>これまでの経験</li>
+      <li>培ってきた技術</li>
+      <li>大切にしている価値観</li>
+      <li>歩んできた歴史</li>
+    </ul>
+    <svg viewBox="0 0 240 170" style="height:20vh; margin-top:2.5vh; align-self:center;">
+      <rect x="40" y="122" width="160" height="26" rx="9" fill="#324B52"/>
+      <rect x="52" y="93" width="136" height="26" rx="9" fill="#5E4B3A"/>
+      <rect x="64" y="64" width="112" height="26" rx="9" fill="#ACD5DA"/>
+      <rect x="76" y="35" width="88" height="26" rx="9" fill="#EFEAD9" stroke="#c9bfa8" stroke-width="2"/>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S24 | ソースの定義 -->
+  <section class="slide center">
+    <p class="sub" style="margin-bottom:2vh;">一言で言うと、</p>
+    <h1 class="mid"><span class="em">【しあわせを生み出すエネルギー】</span></h1>
+    <p class="sub" style="margin-top:2.5vh;">それが、<span class="em">ソース</span>です。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S25 | 最も強く影響するソース -->
+  <section class="slide center">
+    <h1 class="mid">その中でも、個人に<span class="em">最も強く<br>影響を与えているソース</span>があります。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S26 | それがルーツ＝家系 -->
+  <section class="slide center">
+    <p class="sub" style="margin-bottom:2vh;">それが、</p>
+    <h1 class="mid"><span class="em">【自分のルーツ ＝ 家系】</span><br>です。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S27 | ルーツの図（木の根） -->
+  <section class="slide">
+    <div class="kicker dark">ルーツ ＝ 家系</div>
+    <h1 class="lead" style="margin-bottom:0.5vh;">家系は、木の根のように広がっている。</h1>
+    <svg viewBox="0 0 820 470" width="100%" style="max-height:54vh; margin-top:1vh;">
+      <ellipse cx="410" cy="250" rx="330" ry="30" fill="#EFEAD9"/>
+      <line x1="90" y1="250" x2="730" y2="250" stroke="#c9bfa8" stroke-width="1.5" stroke-dasharray="4 8"/>
+      <ellipse cx="410" cy="120" rx="150" ry="90" fill="#ACD5DA"/>
+      <rect x="394" y="180" width="32" height="72" fill="#5E4B3A"/>
+      <g fill="none" stroke="#5E4B3A" stroke-width="5" stroke-linecap="round">
+        <path d="M410,250 C410,320 410,380 410,440"/>
+        <path d="M410,255 C400,320 320,350 270,440"/>
+        <path d="M410,255 C420,320 500,350 550,440"/>
+        <path d="M410,258 C380,310 240,330 170,412"/>
+        <path d="M410,258 C440,310 580,330 650,412"/>
+        <path d="M320,352 C300,382 300,404 282,432" stroke-width="3"/>
+        <path d="M500,352 C520,382 520,404 538,432" stroke-width="3"/>
+      </g>
+      <text x="410" y="116" text-anchor="middle" fill="#324B52" font-size="21" font-weight="700">今の自分・事業</text>
+      <text x="410" y="143" text-anchor="middle" fill="#3f6169" font-size="14">（枝葉）</text>
+      <text x="410" y="463" text-anchor="middle" fill="#5E4B3A" font-size="19" font-weight="700">根 ＝ ルーツ・家系（ソース）</text>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S28 | Sourceの核＝ルーツ・家系（入れ子の図） -->
+  <section class="slide center">
+    <h1 class="lead" style="margin-bottom:1vh;">Sourceの核になるのが、<span class="em">ルーツ・家系</span>です。</h1>
+    <svg viewBox="0 0 520 470" style="height:52vh; align-self:center; margin-top:1vh;">
+      <ellipse cx="260" cy="262" rx="228" ry="182" fill="#F7F4EC" stroke="#324B52" stroke-width="3"/>
+      <text x="260" y="52" text-anchor="middle" fill="#324B52" font-size="30" font-weight="700">Source</text>
+      <ellipse cx="260" cy="298" rx="108" ry="90" fill="#ACD5DA"/>
+      <text x="260" y="222" text-anchor="middle" fill="#324B52" font-size="25" font-weight="700">核</text>
+      <text x="260" y="308" text-anchor="middle" fill="#1f3a40" font-size="25" font-weight="700">ルーツ・家系</text>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S29 | 今日のテーマ（問い） -->
+  <section class="slide center ask">
+    <h1 class="mid">では、家系からどのように、<br><span class="em">ソースと繋がれば</span>いいんでしょうか？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S30 | 家系資産 提示（イラスト付き） -->
+  <section class="slide center">
+    <p class="sub" style="margin-bottom:1.5vh;">その鍵になるのが、</p>
+    <h1 class="big"><span class="em">家系資産</span></h1>
+    <p class="sub" style="margin-top:1vh;">という概念。</p>
+    <svg viewBox="0 0 200 190" style="height:20vh; margin-top:2.5vh; align-self:center;">
+      <path d="M170,34 l5,14 l14,5 l-14,5 l-5,14 l-5,-14 l-14,-5 l14,-5 z" fill="#ACD5DA"/>
+      <rect x="46" y="86" width="108" height="84" rx="8" fill="#ACD5DA"/>
+      <rect x="38" y="68" width="124" height="26" rx="8" fill="#324B52"/>
+      <rect x="92" y="68" width="16" height="102" fill="#EFEAD9"/>
+      <circle cx="83" cy="58" r="13" fill="none" stroke="#324B52" stroke-width="8"/>
+      <circle cx="117" cy="58" r="13" fill="none" stroke="#324B52" stroke-width="8"/>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S31 | 家系資産の定義 -->
+  <section class="slide center">
+    <p class="sub" style="margin-bottom:2vh;">家系資産とは——</p>
+    <h1 class="mid"><span class="em">家系から流れている資産</span>のこと。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S32 | 効果：富と繁栄 -->
+  <section class="slide center">
+    <h1 class="mid">これをうまく活かせると、<br><span class="em">富と繁栄</span>が生まれます。</h1>
+    <p class="sub">しかも、その流れは、次の世代へと続いていく。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S33 | 問い：富と繁栄って？ -->
+  <section class="slide center ask">
+    <h1 class="mid">“富と繁栄が生まれる”って、<br>どういうこと？</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S34 | 核心：関係性 -->
+  <section class="slide center">
+    <p class="sub" style="margin-bottom:2vh;">富や繁栄を生み出す、いちばん重要なもの——</p>
+    <h1 class="mid">それは、<span class="em">【人とのご縁・関係性】</span>です。</h1>
+    <p class="sub">お金や物ではなく、人と人の“間”に、富は生まれる。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S35 | 幸せはすべて関係性から -->
+  <section class="slide center">
+    <h1 class="mid" style="margin-bottom:2.5vh;">幸せは、すべて<span class="em">関係性</span>から。</h1>
+    <ul style="text-align:left;">
+      <li>事業承継</li>
+      <li>相続・贈与（財産）</li>
+      <li>教育・子への関わり</li>
+      <li>パートナーシップ</li>
+      <li>メンターや上司</li>
+      <li>クライアント</li>
+      <li>友人や仲間</li>
+    </ul>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S36 | 補足：関係性がいちばん濃く効く -->
+  <section class="slide center">
+    <h1 class="mid">関係性がうまくいっていないと——<br><span class="em">どんなチャンスやギフトも、争いになる。</span></h1>
+    <p class="sub">どれだけ価値のある資産でも。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S37 | 生かせると大きく変わる -->
+  <section class="slide center">
+    <h1 class="mid">家系から流れる<span class="em">【家系資産】</span>を<br>生かせるようになると——<span class="em">大きく変わる。</span></h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S38 | つの資産（図） -->
+  <section class="slide">
+    <div class="kicker dark">家系資産の、2つのタイプ</div>
+    <svg viewBox="0 0 860 400" width="100%" style="max-height:58vh; margin-top:1vh;">
+      <rect x="330" y="10" width="200" height="64" rx="14" fill="#EFEAD9" stroke="#e0d8c4"/>
+      <text x="430" y="49" text-anchor="middle" fill="#211815" font-size="24" font-weight="700">家系資産</text>
+      <path d="M400,74 C360,110 280,120 240,158" fill="none" stroke="#5E4B3A" stroke-width="3"/>
+      <path d="M460,74 C500,110 580,120 620,158" fill="none" stroke="#5E4B3A" stroke-width="3"/>
+      <rect x="80" y="162" width="320" height="210" rx="18" fill="#ACD5DA"/>
+      <text x="240" y="228" text-anchor="middle" fill="#324B52" font-size="28" font-weight="700">陽の資産</text>
+      <text x="240" y="272" text-anchor="middle" fill="#3a5a61" font-size="18">受け継いだ技術・才能</text>
+      <text x="240" y="332" text-anchor="middle" fill="#eaf4f5" font-size="42">☀</text>
+      <rect x="460" y="162" width="320" height="210" rx="18" fill="#324B52"/>
+      <text x="620" y="228" text-anchor="middle" fill="#EFEAD9" font-size="28" font-weight="700">陰の資産</text>
+      <text x="620" y="272" text-anchor="middle" fill="#cdd9d2" font-size="18">受け継いだ課題・可能性</text>
+      <text x="620" y="334" text-anchor="middle" fill="#9db4b0" font-size="40">☾</text>
+    </svg>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S39 | 締め：2つを受け継いでいる -->
+  <section class="slide center">
+    <h1 class="mid">この<span class="em">2つの資産</span>を、<br>私たちは家系から受け継いでいる。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S40 | 今日は陰の資産を深める（扉） -->
+  <section class="slide center">
+    <h1 class="mid">今日は、<span class="em">陰の資産</span>について<br>深めていきます。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S41 | 課題に感じる出会い（問い） -->
+  <section class="slide center ask">
+    <h1 class="mid">みなさんは人生の中で、<br>「なんでこういう人とばかり<br>出会うんだろう？」</h1>
+    <p class="sub">という、<span class="em">課題に感じる出会い</span>はありますか？</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S42 | 課題に感じる出会いの例 -->
+  <section class="slide">
+    <ul>
+      <li>いつも厳しい先輩や上司とばかり出会う</li>
+      <li>仕事ができない人とばかり組むことが多い</li>
+      <li>自分勝手で物事を進める人に振り回される</li>
+      <li>めんどくさい人の世話役ばかりする</li>
+    </ul>
+    <p class="sub" style="margin-top:2.5vh;">……など。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S43 | なぜか出会うタイプの人（問い） -->
+  <section class="slide center ask">
+    <h1 class="mid">自分が望んで選んでいるわけじゃないのに、<br>なぜか、<span class="em">出会うことが多いタイプの人</span>。</h1>
+    <p class="sub">その人とのご縁で、なぜだか頭を悩ませる。<br>そんなことは、ありませんか？</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S44 | 繰り返されるご縁＝陰の資産 -->
+  <section class="slide center">
+    <h1 class="mid">実は、自分で選んでいないのに<br>繰り返される<span class="em">“課題に感じるご縁”</span>は、<br>家系からの<span class="em">陰の資産</span>です。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S45 | 課題のご縁が教えてくれること -->
+  <section class="slide center">
+    <p class="sub" style="margin-bottom:2vh;">課題に感じるご縁は——</p>
+    <h1 class="mid">家系に流れる<span class="em">“負担が大きい役割”</span>を<br>背負っていることを、教えてくれます。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S46 | 実際の事例（扉） -->
+  <section class="slide center">
+    <div class="kicker dark">実際の事例</div>
+    <h1 class="mid">実際の事例について、<br>お話しします。</h1>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S47 | 事例：Yさんの紹介 -->
+  <section class="slide center">
+    <p class="story">いつも「<span class="em">なんとかしてあげないといけない人</span>」と多く出会う、<span class="em">Yさん</span>という女性経営者がいました。<br>その家族も「自分がなんとかしないと」と背負ってしまう人が多く、その結果、<span class="em">大きな病</span>になってしまう人も多かったのです。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S48 | 事例：家系の信念 -->
+  <section class="slide center">
+    <p class="story">Yさんの家系にとって、「なんとかしてあげる役割」は<span class="em">負担が大きい役割</span>でした。<br>ですが家系には、「<span class="em">なんとかしてあげないといけない</span>」という信念が流れていました。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S49 | 事例：裏に流れる才能に気づく -->
+  <section class="slide center">
+    <p class="story">ですがYさんは、家系の信念の裏に流れる<span class="em">“才能”</span>に気づきました。<br>それは「<span class="em">本人が自ら立ち上がれるよう導く才能</span>」。<br>その才能を発揮したところ、驚くべき変化が起きました。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S50 | 事例：起きた変化 -->
+  <section class="slide center">
+    <div class="kicker dark">起きた変化</div>
+    <ul style="text-align:left;">
+      <li>税金を滞納し赤字続きで頼りなかった夫の事業が、<span class="em">右肩上がりに成長</span></li>
+      <li>才能の活かしどころが分からない人に気づきを与え、<span class="em">年商200万円 → 1000万円</span>に</li>
+    </ul>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S51 | 事例：家系全体へ広がる -->
+  <section class="slide center">
+    <p class="story">さらに、頑張りすぎていた<span class="em">祖母や母親</span>も周りに甘えられるようになり、「なんとかしないといけない」という信念がどんどん溶けて、<span class="em">家系全体に良い影響</span>が広がっていきました。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S52 | 家系の信念の影響 -->
+  <section class="slide center">
+    <p class="story">僕たちは、無意識にいろいろな影響を受けています。<br>時代、社会の空気、常識——<br>その中でも家系が持つ<span class="em">“信念”</span>は、良くも悪くも大きな影響を、お互いに与え合っています。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S53 | 陰の資産＝役割を教えてくれる -->
+  <section class="slide center">
+    <p class="story"><span class="em">陰の資産</span>は、家系に流れる<span class="em">“富としあわせが生まれる役割”</span>を教えてくれます。<br>その役割を生きることで、しあわせを生み出すエネルギー＝<span class="em">源（ソース）</span>と繋がることができます。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S54 | ズレた役割を手放す -->
+  <section class="slide center">
+    <p class="story"><span class="em">負担の大きいズレた役割</span>を手放し、<span class="em">富やしあわせを生み出す役割</span>に気づくことで、<br>より良い関係性を生み出していくことができます。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S55 | オセロがひっくり返る -->
+  <section class="slide center">
+    <p class="story">この家系に流れる資産に気づき、活かせると、<span class="em">オセロがひっくり返るように</span>、課題だと感じていたところから<span class="em">しあわせが拡大</span>していきます。</p>
+    <p class="sub">しかも自分だけでなく、周りの家系にも——その影響は無意識に、着実に、広がっていく。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S56 | 活かせると広がる -->
+  <section class="slide center">
+    <h1 class="mid">その資産を<span class="em">活かせたとき</span>、<br>しあわせは、無理なく広がっていく。</h1>
+    <p class="sub">あなたの<span class="em">使命</span>さえ、その資産の中から生まれてくる。</p>
+    <div class="speak">▶ 問いかけ：<span>ここまで聞いて、どう感じますか？</span></div>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S57 | ブリッジ問い -->
+  <section class="slide center ask">
+    <div class="q-mark">？</div>
+    <h1 class="mid">あなたの「源」には、<br>どんな力が<span class="em">眠っている</span>でしょう。</h1>
+    <div class="speak">▶ 問いかけ：<span>では、それをどう見つけ、どう活かす？</span></div>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S58 | 感謝＋転換 -->
+  <section class="slide center">
+    <h1 class="mid">ここまで聞いてくださり、<br>ありがとうございました。</h1>
+    <p class="sub">この後は、<span class="em">あなた自身の「源」から始める</span>、<br>具体的な一歩をお伝えします。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S59 | 後半・仮：本講座 -->
+  <section class="slide center draft">
+    <div class="draft-badge">仮 / 要調整</div>
+    <div class="kicker">本講座のご案内</div>
+    <h1 class="big"><span class="fill">〔 本講座タイトル 〕</span></h1>
+    <p class="sub">〔 一言でどんな講座か 〕<br><span style="color:var(--brown); font-size:1.2vw;">※後半の詳細をいただいたら、ここを本文に置き換えます</span></p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S60 | 後半・仮：得られること -->
+  <section class="slide draft">
+    <div class="draft-badge">仮 / 要調整</div>
+    <div class="kicker dark">この講座で得られること</div>
+    <ul>
+      <li>〔 得られること ① 〕</li>
+      <li>〔 得られること ② 〕</li>
+      <li>〔 得られること ③ 〕</li>
+    </ul>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S61 | 後半・仮：ご案内（価格） -->
+  <section class="slide center draft">
+    <div class="draft-badge">仮 / 価格トーンは要相談</div>
+    <div class="kicker dark">ご参加について</div>
+    <h1 class="mid"><span class="fill">〔 内容・日程・場所・ご費用 〕</span></h1>
+    <p class="sub" style="color:var(--brown); font-size:1.25vw;">※アンカリングは「いやらしくない・誠実に」整える方針。<br>価値の伝え方はにょんにょんの指示を反映します。</p>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+  <!-- S62 | 結び -->
+  <section class="slide center">
+    <div class="kicker">さいごに</div>
+    <h1 class="mid">一緒に、<span class="em">あなたの「源」</span>から。<br>しあわせが自然に広がる未来を、つくっていきましょう。</h1>
+    <div class="foot-l">しあわせだいがく</div>
+    <div class="foot">© 2026 MARU CONSULTING</div>
+  </section>
+
+</div>
+
+<div class="hint">← → キーでスライド移動 ／ クリックでも進みます</div>
+<div class="nav">
+  <button onclick="go(-1)">← 前へ</button>
+  <button onclick="go(1)">次へ →</button>
+</div>
+<div id="counter"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let i = 0;
+  const counter = document.getElementById('counter');
+  function show(n){
+    slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length-1, n));
+    slides[i].classList.add('active');
+    counter.textContent = (i+1) + ' / ' + slides.length;
+  }
+  function go(d){ show(i+d); }
+  document.addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' ') go(1);
+    if(e.key==='ArrowLeft'||e.key==='PageUp') go(-1);
+    if(e.key==='Home') show(0);
+    if(e.key==='End') show(slides.length-1);
+  });
+  document.getElementById('stage').addEventListener('click', e=>{
+    if(e.target.closest('.nav')) return;
+    go(1);
+  });
+  show(0);
+</script>
+</body>
+</html>
